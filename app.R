@@ -128,6 +128,7 @@ server <- function(input, output) {
             plot.title = element_text(size = 14, face = "bold", color = "black"),
             axis.title.x = element_text(size = 12, face = "bold", color = "black"),
             axis.title.y = element_text(size = 12, face = "bold", color = "black"))
+
       
   )
   
@@ -161,9 +162,6 @@ server <- function(input, output) {
             plot.title = element_text(size = 14, face = "bold", color = "black"),
             axis.title.x = element_text(size = 12, face = "bold", color = "black"),
             axis.title.y = element_text(size = 12, face = "bold", color = "black"))
-  
-      
-            
     
       
       
@@ -187,9 +185,6 @@ server <- function(input, output) {
           plot.title = element_text(size = 14, face = "bold", color = "black"),
           axis.title.x = element_text(size = 12, face = "bold", color = "black"),
           axis.title.y = element_text(size = 12, face = "bold", color = "black"))
-          
-        
-        
     )
   })
   
@@ -311,3 +306,5 @@ server <- function(input, output) {
 
 # Uruchomienie apki ####
 shinyApp(ui = ui, server = server)
+
+
