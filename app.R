@@ -7,6 +7,7 @@ library(sf)
 library(ggplot2)
 library(plotly)
 
+
 #Ładowanie zbioru danych ####
 parks <- read_csv('data/parks.csv')
 species <- read_csv('data/species.csv')
@@ -45,9 +46,9 @@ ui <- fluidPage(
   tags$head(
     tags$style(
       HTML('
-           body { background-color: #ffffff; width: 100% }
-           .container { background-color: #aaaaaa; padding: 60px; }
-           .infodiv { background-color: #eeeeee; }
+           body { background-color: #F0FFFF; width: 100% }
+           .container { background-color: #E0EEEE; padding: 60px; }
+           .infodiv { background-color: #E0EEEE; }
            .afterplot { margin-top: 20px; }
            ')
     )
@@ -119,10 +120,15 @@ server <- function(input, output) {
   na_data <- na_data %>% filter(NullsPercentage > 0) %>% arrange(NullsPercentage)
   
   output$dataQualityBarPlot <- renderPlot(
-    ggplot(na_data, aes(x = factor(Columns, level = c(Columns)), y = NullsPercentage)) +
-      geom_bar(stat = 'identity', fill = 'skyblue') +
+    ggplot(na_data, aes(x = factor(Columns, level = c(Columns)), y = NullsPercentage, fill = Columns)) +
+      geom_bar(stat = 'identity', width = 0.7) +
+      geom_text(aes(label = sprintf("%.2f%%", NullsPercentage)), vjust = -0.5, size = 4) +
       labs(x = 'Kolumny', y = 'Procent niepełnych danych', title = 'Jakość danych') +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+      theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, color = "black"),
+            plot.title = element_text(size = 14, face = "bold", color = "black"),
+            axis.title.x = element_text(size = 12, face = "bold", color = "black"),
+            axis.title.y = element_text(size = 12, face = "bold", color = "black"))
+      
   )
   
   output$categoryBarPlot <- renderPlotly(
@@ -131,7 +137,14 @@ server <- function(input, output) {
       summarise(count = n()) %>%
       ggplot(data = ., aes(x = Category, y = count, fill = Category)) +
       geom_bar(stat = 'identity') +
-      labs(title = 'Liczba gatunków w poszczególnych gromadach', x = 'Gromady', y = 'Liczba')
+      labs(title = 'Liczba gatunków w poszczególnych gromadach', x = 'Gromady', y = 'Liczba') +
+      theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(size = 14, face = "bold", color = "black"),
+        axis.title.x = element_text(size = 12, face = "bold", color = "black"),
+        axis.title.y = element_text(size = 12, face = "bold",color = "black"),
+        plot.margin = margin(15, 15, 15, 15)  
+      )
   )
   
   #Wizualizacja danych ####
@@ -139,22 +152,45 @@ server <- function(input, output) {
     group_by(State) %>% summarise(count = n())
   
   output$statesSpecies <- renderPlot(
-    ggplot(data = StatesCount, aes(x = State, y = count)) +
-      geom_bar(stat = 'identity', fill = 'skyblue') +
-      labs(title = 'Wykres', x = 'Stany', y = 'Gatunki')
+    ggplot(data = StatesCount,aes(x = State, y = count)) +
+      geom_bar(stat = 'identity', width = 0.7, fill="#BCEE68") +
+      labs(title = 'Wykres', x = 'Stany', y = 'Gatunki')+
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+      theme(panel.background = element_rect(fill = 'white'),
+            panel.grid.major = element_line(color = 'gray', linetype = 'dotted'),
+            plot.title = element_text(size = 14, face = "bold", color = "black"),
+            axis.title.x = element_text(size = 12, face = "bold", color = "black"),
+            axis.title.y = element_text(size = 12, face = "bold", color = "black"))
+  
+      
+            
+    
+      
+      
   )
   
   output$parksSpecies <- renderPlotly({
-    ggplotly(myData %>%
-               group_by(`Park Name`, `Park Code`, Category) %>%
-               summarise(speciesCount = n()) %>%
-               ggplot(aes(x = `Park Code`, y = speciesCount, fill = Category)) +
-               geom_bar(stat = 'identity') +
-               labs(x = 'Kod parku', 
-                    y = 'Liczba gatunków', 
-                    title = 'Liczba gatunków przypadająca na park z podziałami na rodzaj',
-                    fill = 'Mode Type')
-               )
+    ggplotly(
+      myData %>%
+        group_by(`Park Name`, `Park Code`, Category) %>%
+        summarise(speciesCount = n()) %>%
+        ggplot(aes(x = `Park Code`, y = speciesCount, fill = Category)) +
+        geom_bar(stat = 'identity') +
+        labs(
+          x = 'Kod parku',
+          y = 'Liczba gatunków',
+          title = 'Liczba gatunków przypadająca na park',
+          fill = 'Mode Type'
+        ) +
+        theme(
+          axis.text.x = element_text(angle = 45, hjust = 1,size = 4),
+          plot.title = element_text(size = 14, face = "bold", color = "black"),
+          axis.title.x = element_text(size = 12, face = "bold", color = "black"),
+          axis.title.y = element_text(size = 12, face = "bold", color = "black"))
+          
+        
+        
+    )
   })
   
   output$parkInfo <- renderText({
@@ -166,18 +202,21 @@ server <- function(input, output) {
   
   output$featureBarPlot <- renderPlotly({
     currentParkData <- filter(myData, `Park Name` == input$park)
-    ggplotly(currentParkData %>% 
-               group_by_at(input$feature) %>%
-               summarise(count = n()) %>%
-               ggplot(aes(x = eval(as.name(input$feature)), y = count
-                          , fill = eval(as.name(input$feature)))) +
-               geom_bar(stat = 'identity') +
-               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-               labs(title = 'Wykres', x = input$feature , y = 'Liczba gatunków',
-                    color = 'MyTitle'),
-             tooltip = c(as.character(input$feature), 'count')
-             )
     
+    p <- currentParkData %>%
+      group_by_at(input$feature) %>%
+      summarise(count = n()) %>%
+      ggplot(aes(x = eval(as.name(input$feature)), y = count, fill = eval(as.name(input$feature)))) +
+      geom_bar(stat = 'identity', width = 0.6, position = position_dodge(width = 0.6)) +
+      scale_fill_brewer(palette = "Set3") +
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust = 1),
+            axis.title = element_text(size = 11, color = "black", face = "bold"),
+            axis.text = element_text(size = 10, color = "black", face = "bold"),
+            plot.title = element_text(size = 15, hjust = 0.5, color = "black",face = "bold"),
+            legend.position = "top", legend.title = element_blank()) +
+      labs(title = 'Wykres', x = input$feature, y = 'Liczba gatunków', color = 'MyTitle')
+    
+    ggplotly(p, tooltip = c("Park Name", "count"))
   })
   
   
