@@ -124,7 +124,11 @@ server <- function(input, output) {
       geom_bar(stat = 'identity', width = 0.7) +
       geom_text(aes(label = sprintf("%.2f%%", NullsPercentage)), vjust = -0.5, size = 4) +
       labs(x = 'Kolumny', y = 'Procent niepełnych danych', title = 'Jakość danych') +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+      theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1, color = "black"),
+            plot.title = element_text(size = 14, face = "bold", color = "black"),
+            axis.title.x = element_text(size = 12, face = "bold", color = "black"),
+            axis.title.y = element_text(size = 12, face = "bold", color = "black"))
+
       
   )
   
@@ -134,8 +138,14 @@ server <- function(input, output) {
       summarise(count = n()) %>%
       ggplot(data = ., aes(x = Category, y = count, fill = Category)) +
       geom_bar(stat = 'identity') +
-      labs(title = 'Liczba gatunków w poszczególnych gromadach', x = 'Gromady', y = 'Liczba')+
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      labs(title = 'Liczba gatunków w poszczególnych gromadach', x = 'Gromady', y = 'Liczba') +
+      theme(
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        plot.title = element_text(size = 14, face = "bold", color = "black"),
+        axis.title.x = element_text(size = 12, face = "bold", color = "black"),
+        axis.title.y = element_text(size = 12, face = "bold",color = "black"),
+        plot.margin = margin(15, 15, 15, 15)  
+      )
   )
   
   #Wizualizacja danych ####
@@ -144,11 +154,14 @@ server <- function(input, output) {
   
   output$statesSpecies <- renderPlot(
     ggplot(data = StatesCount,aes(x = State, y = count)) +
-      geom_bar(stat = 'identity', fill = 'red', width = 0.7) +
+      geom_bar(stat = 'identity', width = 0.7, fill="#BCEE68") +
       labs(title = 'Wykres', x = 'Stany', y = 'Gatunki')+
       theme(axis.text.x = element_text(angle = 45, hjust = 1))+
       theme(panel.background = element_rect(fill = 'white'),
-            panel.grid.major = element_line(color = 'gray', linetype = 'dotted'))
+            panel.grid.major = element_line(color = 'gray', linetype = 'dotted'),
+            plot.title = element_text(size = 14, face = "bold", color = "black"),
+            axis.title.x = element_text(size = 12, face = "bold", color = "black"),
+            axis.title.y = element_text(size = 12, face = "bold", color = "black"))
     
       
       
@@ -168,9 +181,10 @@ server <- function(input, output) {
           fill = 'Mode Type'
         ) +
         theme(
-          axis.text.x = element_text(angle = 90, hjust = 1,size = 4) 
-        )
-        
+          axis.text.x = element_text(angle = 45, hjust = 1,size = 4),
+          plot.title = element_text(size = 14, face = "bold", color = "black"),
+          axis.title.x = element_text(size = 12, face = "bold", color = "black"),
+          axis.title.y = element_text(size = 12, face = "bold", color = "black"))
     )
   })
   
@@ -190,10 +204,10 @@ server <- function(input, output) {
       ggplot(aes(x = eval(as.name(input$feature)), y = count, fill = eval(as.name(input$feature)))) +
       geom_bar(stat = 'identity', width = 0.6, position = position_dodge(width = 0.6)) +
       scale_fill_brewer(palette = "Set3") +
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.6, hjust = 1),
-            axis.title = element_text(size = 12, color = "blue"),
-            axis.text = element_text(size = 10, color = "black"),
-            plot.title = element_text(size = 16, hjust = 0.5, color = "blue"),
+      theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust = 1),
+            axis.title = element_text(size = 11, color = "black", face = "bold"),
+            axis.text = element_text(size = 10, color = "black", face = "bold"),
+            plot.title = element_text(size = 15, hjust = 0.5, color = "black",face = "bold"),
             legend.position = "top", legend.title = element_blank()) +
       labs(title = 'Wykres', x = input$feature, y = 'Liczba gatunków', color = 'MyTitle')
     
