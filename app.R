@@ -91,9 +91,29 @@ ui <- fluidPage(
                                         .before = 1)),
           selectInput('occurrence',
                       'Występowanie',
-                      choices = add_row(unique(species['Occurrence']),
+                      choices = drop_na(add_row(unique(species['Occurrence']),
                                         Occurrence = 'All',
-                                        .before = 1)),
+                                        .before = 1))),
+          selectInput('nativeness',
+                      'Rodzimość',
+                      choices = drop_na(add_row(unique(species['Nativeness']),
+                                        Nativeness = 'All',
+                                        .before = 1))),
+          selectInput('abundance',
+                      'Rzadkość',
+                      choices = drop_na(add_row(unique(species['Abundance']),
+                                        Abundance = 'All',
+                                        .before = 1))),
+          selectInput('seasonality',
+                      'Sezonowość',
+                      choices = drop_na(add_row(unique(species['Seasonality']),
+                                                Seasonality = 'All',
+                                                .before = 1))),
+          selectInput('safeStatus',
+                      'Status',
+                      choices = drop_na(add_row(unique(species['Conservation Status']),
+                                                `Conservation Status` = c('All', 'Safe'),
+                                                .before = 1))),
           DT::dataTableOutput('spieciesTable'),
           align = 'center',
           class = 'infodiv'
@@ -170,8 +190,32 @@ server <- function(input, output) {
       )
   )
   
-  output$speciesTable <- DT::renderDataTable({
-    species
+  output$spieciesTable <- DT::renderDataTable({
+    speciesInTable <- species
+    if (input$category != 'All') {
+      speciesInTable <- filter(speciesInTable, Category == input$category)
+    }
+    if (input$occurrence != 'All') {
+      speciesInTable <- filter(speciesInTable, Occurrence == input$occurrence)
+    }
+    if (input$nativeness != 'All') {
+      speciesInTable <- filter(speciesInTable, Nativeness == input$nativeness)
+    }
+    if (input$abundance != 'All') {
+      speciesInTable <- filter(speciesInTable, Abundance == input$abundance)
+    }
+    if (input$seasonality != 'All') {
+      speciesInTable <- filter(speciesInTable, Seasonality == input$seasonality)
+    }
+    if (input$safeStatus != 'All') {
+      speciesInTable <- filter(speciesInTable, Status == input$safeStatus)
+    }
+    speciesInTable %>%
+      select(Category, Order, Family, `Scientific Name`, `Common Names`,
+             Occurrence, Nativeness, Abundance, Seasonality, Status) %>%
+      distinct(Category, Order, Family, `Scientific Name`, `Common Names`,
+               Occurrence, Nativeness, Abundance, Seasonality, Status) %>%
+      DT::datatable(filter = 'top')
   })
   
   #Wizualizacja danych ####
