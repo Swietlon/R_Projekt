@@ -95,10 +95,14 @@ ui <- fluidPage(
          selectInput('feature',
                      'Wybierz cechę',
                      choices = c('Category', 'Occurrence', 'Nativeness', 'Abundance', 'Seasonality', 'Status')),
+         sliderInput('cut',
+                     'Wybierz obcięcie',
+                     min = 0,
+                     max = 500,
+                     value = 0
+         ),
          textOutput(outputId = 'parkInfo'),
-         plotlyOutput(outputId = 'featureBarPlot'),
-         plotlyOutput(outputId = 'categoryParkPlot'),
-         plotlyOutput(outputId = 'occurrenceParkPlot')
+         plotlyOutput(outputId = 'featureBarPlot')
         
       ),
       tabPanel(
@@ -177,8 +181,7 @@ server <- function(input, output) {
         labs(
           x = 'Kod parku',
           y = 'Liczba gatunków',
-          title = 'Liczba gatunków przypadająca na park',
-          fill = 'Mode Type'
+          title = 'Liczba gatunków przypadająca na park'
         ) +
         theme(
           axis.text.x = element_text(angle = 45, hjust = 1,size = 4),
@@ -197,10 +200,12 @@ server <- function(input, output) {
   
   output$featureBarPlot <- renderPlotly({
     currentParkData <- filter(myData, `Park Name` == input$park)
+    currentFeature <- input$feature
     
     p <- currentParkData %>%
       group_by_at(input$feature) %>%
       summarise(count = n()) %>%
+      filter(count > input$cut & !is.na(eval(as.name(input$feature)))) %>%
       ggplot(aes(x = eval(as.name(input$feature)), y = count, fill = eval(as.name(input$feature)))) +
       geom_bar(stat = 'identity', width = 0.6, position = position_dodge(width = 0.6)) +
       scale_fill_brewer(palette = "Set3") +
@@ -208,37 +213,13 @@ server <- function(input, output) {
             axis.title = element_text(size = 11, color = "black", face = "bold"),
             axis.text = element_text(size = 10, color = "black", face = "bold"),
             plot.title = element_text(size = 15, hjust = 0.5, color = "black",face = "bold"),
-            legend.position = "top", legend.title = element_blank()) +
-      labs(title = 'Wykres', x = input$feature, y = 'Liczba gatunków', color = 'MyTitle')
+            legend.position = "top") +
+      labs(title = 'Wykres', x = currentFeature, y = 'Liczba gatunków', color = currentFeature) +
+      theme(legend.title =  element_blank())
     
     ggplotly(p, tooltip = c("Park Name", "count"))
   })
   
-  
-  output$categoryParkPlot <- renderPlotly({
-    currentParkData <- filter(myData, `Park Name` == input$park)
-    ggplotly(currentParkData %>% 
-               group_by(Category) %>%
-               summarise(count = n()) %>%
-               ggplot(aes(x = Category, y = count, fill = Category)) +
-               geom_bar(stat = 'identity') +
-               coord_flip() +
-               labs(title = 'Wykres gromady', x = 'Gromada', y = 'Liczba gatunków'),
-             tooltip = c('Category', 'count'))
-  })
-  
-  
-  output$occurrenceParkPlot <- renderPlotly({
-    currentParkData <- filter(myData, `Park Name` == input$park)
-    ggplotly(currentParkData %>% 
-               group_by(Occurrence) %>%
-               summarise(count = n()) %>%
-               ggplot(aes(x = Occurrence, y = count, fill = Occurrence)) +
-               geom_bar(stat = 'identity') +
-               theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-               labs(title = 'Wykres występowania', x = 'Występowanie', y = 'Liczba gatunków'),
-             tooltip = c('Occurrence', 'count'))
-  })
   
   #Mapy ####
   
@@ -285,7 +266,7 @@ server <- function(input, output) {
     myPal <- colorNumeric(palette = c('blue', 'red'), domain = speciesPerPark$speciesPerArea)
     
     speciesPerPark %>%
-      leaflet() %>%
+      leaflet() %>% 
       addTiles() %>%
       addCircleMarkers(weight = 1, 
                        radius = sqrt(speciesPerPark$speciesPerArea) * 5 , 
