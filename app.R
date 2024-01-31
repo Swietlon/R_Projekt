@@ -6,6 +6,7 @@ library(tidyverse)
 library(sf)
 library(ggplot2)
 library(plotly)
+library(DT)
 
 
 #Ładowanie zbioru danych ####
@@ -50,6 +51,7 @@ ui <- fluidPage(
            .container { background-color: #E0EEEE; padding: 60px; }
            .infodiv { background-color: #E0EEEE; }
            .afterplot { margin-top: 20px; }
+           #parkInfo { margin-bottom: 20px; font-weight: 700; }
            ')
     )
   ),
@@ -75,12 +77,44 @@ ui <- fluidPage(
           h2('Dane'),
           plotOutput(outputId = 'dataQualityBarPlot'),
           p('Powyższy wykres przedstawia procentowy brak danych konkretnych
-                kolumn w zbiorów. Kolumny, które mają 100% wypełnienie zostały
+                kolumn w zbiorze. Kolumny, które mają 100% wypełnienie zostały
                 pominięte. `Conservation Status` odnosi się
                 do statusu ochrony. Na potrzeby projektu przyjęto, że jeżeli
                 status nie występuje, to gatunek jest bezpieczny (Safe).',class = 'afterplot'),
-          p('Ilość poszczególnych gromad'),
+          p('Ilość poszczególnych kategorii'),
           plotlyOutput(outputId = 'categoryBarPlot'),
+          h3('Przegląd gatunków'),
+          selectInput('category',
+                      'Kategoria',
+                      choices = add_row(unique(species['Category']),
+                                        Category = 'All',
+                                        .before = 1)),
+          selectInput('occurrence',
+                      'Występowanie',
+                      choices = drop_na(add_row(unique(species['Occurrence']),
+                                        Occurrence = 'All',
+                                        .before = 1))),
+          selectInput('nativeness',
+                      'Rodzimość',
+                      choices = drop_na(add_row(unique(species['Nativeness']),
+                                        Nativeness = 'All',
+                                        .before = 1))),
+          selectInput('abundance',
+                      'Rzadkość',
+                      choices = drop_na(add_row(unique(species['Abundance']),
+                                        Abundance = 'All',
+                                        .before = 1))),
+          selectInput('seasonality',
+                      'Sezonowość',
+                      choices = drop_na(add_row(unique(species['Seasonality']),
+                                                Seasonality = 'All',
+                                                .before = 1))),
+          selectInput('safeStatus',
+                      'Status',
+                      choices = drop_na(add_row(unique(species['Conservation Status']),
+                                                `Conservation Status` = c('All', 'Safe'),
+                                                .before = 1))),
+          DT::dataTableOutput('spieciesTable'),
           align = 'center',
           class = 'infodiv'
         )
@@ -102,7 +136,11 @@ ui <- fluidPage(
                      value = 0
          ),
          textOutput(outputId = 'parkInfo'),
-         plotlyOutput(outputId = 'featureBarPlot')
+         plotlyOutput(outputId = 'featureBarPlot'),
+         selectInput('categorySpeciesCount',
+                     'Wybierz kategorię',
+                     choices = unique(species['Category'])),
+         DT::dataTableOutput('speciesTableCount')
         
       ),
       tabPanel(
@@ -142,7 +180,7 @@ server <- function(input, output) {
       summarise(count = n()) %>%
       ggplot(data = ., aes(x = Category, y = count, fill = Category)) +
       geom_bar(stat = 'identity') +
-      labs(title = 'Liczba gatunków w poszczególnych gromadach', x = 'Gromady', y = 'Liczba') +
+      labs(title = 'Liczba gatunków w poszczególnych kategoriach', x = 'Kategorie', y = 'Liczba') +
       theme(
         axis.text.x = element_text(angle = 45, hjust = 1),
         plot.title = element_text(size = 14, face = "bold", color = "black"),
@@ -151,6 +189,34 @@ server <- function(input, output) {
         plot.margin = margin(15, 15, 15, 15)  
       )
   )
+  
+  output$spieciesTable <- DT::renderDataTable({
+    speciesInTable <- species
+    if (input$category != 'All') {
+      speciesInTable <- filter(speciesInTable, Category == input$category)
+    }
+    if (input$occurrence != 'All') {
+      speciesInTable <- filter(speciesInTable, Occurrence == input$occurrence)
+    }
+    if (input$nativeness != 'All') {
+      speciesInTable <- filter(speciesInTable, Nativeness == input$nativeness)
+    }
+    if (input$abundance != 'All') {
+      speciesInTable <- filter(speciesInTable, Abundance == input$abundance)
+    }
+    if (input$seasonality != 'All') {
+      speciesInTable <- filter(speciesInTable, Seasonality == input$seasonality)
+    }
+    if (input$safeStatus != 'All') {
+      speciesInTable <- filter(speciesInTable, Status == input$safeStatus)
+    }
+    speciesInTable %>%
+      select(Category, Order, Family, `Scientific Name`, `Common Names`,
+             Occurrence, Nativeness, Abundance, Seasonality, Status) %>%
+      distinct(Category, Order, Family, `Scientific Name`, `Common Names`,
+               Occurrence, Nativeness, Abundance, Seasonality, Status) %>%
+      DT::datatable(filter = 'top')
+  })
   
   #Wizualizacja danych ####
   StatesCount <- myData %>%
@@ -193,20 +259,21 @@ server <- function(input, output) {
   
   output$parkInfo <- renderText({
     currentPark <- filter(parks, `Park Name` == input$park)
-    paste0('Kod Parku: ', currentPark$`Park Name`, 
+    paste('Kod Parku: ', currentPark$`Park Name`, 
           ', Stany: ', currentPark$statesNames, 
-          ', powierzchnia[km2]: ', round(currentPark$km2, digits = 2))
+          ', powierzchnia[km2]: ', round(currentPark$km2, digits = 2)
+          )
   })
   
   output$featureBarPlot <- renderPlotly({
     currentParkData <- filter(myData, `Park Name` == input$park)
     currentFeature <- input$feature
-    
+
     p <- currentParkData %>%
       group_by_at(input$feature) %>%
       summarise(count = n()) %>%
       filter(count > input$cut & !is.na(eval(as.name(input$feature)))) %>%
-      ggplot(aes(x = eval(as.name(input$feature)), y = count, fill = eval(as.name(input$feature)))) +
+      ggplot(aes(x = eval(as.name(input$feature)), y = count, fill = eval(as.name(currentFeature)))) +
       geom_bar(stat = 'identity', width = 0.6, position = position_dodge(width = 0.6)) +
       scale_fill_brewer(palette = "Set3") +
       theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust = 1),
@@ -215,9 +282,18 @@ server <- function(input, output) {
             plot.title = element_text(size = 15, hjust = 0.5, color = "black",face = "bold"),
             legend.position = "top") +
       labs(title = 'Wykres', x = currentFeature, y = 'Liczba gatunków', color = currentFeature) +
-      theme(legend.title =  element_blank())
+      theme(legend.text = element_blank())
     
     ggplotly(p, tooltip = c("Park Name", "count"))
+  })
+  
+  output$speciesTableCount <- DT::renderDataTable({
+    myData %>%
+      filter(Category == input$categorySpeciesCount) %>%
+      group_by(`Scientific Name`, `Common Names`) %>%
+      summarise(count = n()) %>%
+      arrange(-count) %>%
+      DT::datatable()
   })
   
   
