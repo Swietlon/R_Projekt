@@ -7,6 +7,7 @@ library(sf)
 library(ggplot2)
 library(plotly)
 library(DT)
+library(stringr)
 
 
 #Ładowanie zbioru danych ####
@@ -47,12 +48,12 @@ ui <- fluidPage(
   tags$head(
     tags$style(
       HTML('
-           body { background-color: #F0FFFF; width: 100% }
-           .container { background-color: #E0EEEE; padding: 60px; }
-           .infodiv { background-color: #E0EEEE; }
-           .afterplot { margin-top: 20px; }
-           #parkInfo { margin-bottom: 20px; font-weight: 700; }
-           ')
+         body { background-color: #F0FFFF; width: 100% }
+         .container { background-color: #E0EEEE; padding: 60px; width: 100%; }
+         .infodiv { background-color: #E0EEEE; }
+         .afterplot { margin-top: 20px; }
+         #parkInfo { margin-bottom: 20px; font-weight: 700; }
+         ')
     )
   ),
   #Panele
@@ -84,36 +85,7 @@ ui <- fluidPage(
           p('Ilość poszczególnych kategorii'),
           plotlyOutput(outputId = 'categoryBarPlot'),
           h3('Przegląd gatunków'),
-          selectInput('category',
-                      'Kategoria',
-                      choices = add_row(unique(species['Category']),
-                                        Category = 'All',
-                                        .before = 1)),
-          selectInput('occurrence',
-                      'Występowanie',
-                      choices = drop_na(add_row(unique(species['Occurrence']),
-                                        Occurrence = 'All',
-                                        .before = 1))),
-          selectInput('nativeness',
-                      'Rodzimość',
-                      choices = drop_na(add_row(unique(species['Nativeness']),
-                                        Nativeness = 'All',
-                                        .before = 1))),
-          selectInput('abundance',
-                      'Rzadkość',
-                      choices = drop_na(add_row(unique(species['Abundance']),
-                                        Abundance = 'All',
-                                        .before = 1))),
-          selectInput('seasonality',
-                      'Sezonowość',
-                      choices = drop_na(add_row(unique(species['Seasonality']),
-                                                Seasonality = 'All',
-                                                .before = 1))),
-          selectInput('safeStatus',
-                      'Status',
-                      choices = drop_na(add_row(unique(species['Conservation Status']),
-                                                `Conservation Status` = c('All', 'Safe'),
-                                                .before = 1))),
+          htmlOutput(outputId = 'tableDataInfo'),
           DT::dataTableOutput('spieciesTable'),
           align = 'center',
           class = 'infodiv'
@@ -121,26 +93,26 @@ ui <- fluidPage(
       ),
       tabPanel(
         'Wizualizacja danych', 
-         plotOutput(outputId = 'statesSpecies'),
-         plotlyOutput(outputId = 'parksSpecies'),
-         selectInput('park',
-                     'Wybierz Park Narodowy',
-                     choices = parks['Park Name']),
-         selectInput('feature',
-                     'Wybierz cechę',
-                     choices = c('Category', 'Occurrence', 'Nativeness', 'Abundance', 'Seasonality', 'Status')),
-         sliderInput('cut',
-                     'Wybierz obcięcie',
-                     min = 0,
-                     max = 500,
-                     value = 0
-         ),
-         textOutput(outputId = 'parkInfo'),
-         plotlyOutput(outputId = 'featureBarPlot'),
-         selectInput('categorySpeciesCount',
-                     'Wybierz kategorię',
-                     choices = unique(species['Category'])),
-         DT::dataTableOutput('speciesTableCount')
+        plotOutput(outputId = 'statesSpecies'),
+        plotlyOutput(outputId = 'parksSpecies'),
+        selectInput('park',
+                    'Wybierz Park Narodowy',
+                    choices = parks['Park Name']),
+        selectInput('feature',
+                    'Wybierz cechę',
+                    choices = c('Category', 'Occurrence', 'Nativeness', 'Abundance', 'Seasonality', 'Status')),
+        sliderInput('cut',
+                    'Wybierz obcięcie',
+                    min = 0,
+                    max = 500,
+                    value = 0
+        ),
+        textOutput(outputId = 'parkInfo'),
+        plotlyOutput(outputId = 'featureBarPlot'),
+        selectInput('categorySpeciesCount',
+                    'Wybierz kategorię',
+                    choices = unique(species['Category'])),
+        DT::dataTableOutput('speciesTableCount')
         
       ),
       tabPanel(
@@ -155,6 +127,7 @@ ui <- fluidPage(
 
 #Serwer ####
 server <- function(input, output) {
+  
   #Informacje ####
   
   na_data <- apply(X = is.na(myData), MARGIN = 2, FUN = mean) * 100
@@ -170,8 +143,8 @@ server <- function(input, output) {
             plot.title = element_text(size = 14, face = "bold", color = "black"),
             axis.title.x = element_text(size = 12, face = "bold", color = "black"),
             axis.title.y = element_text(size = 12, face = "bold", color = "black"))
-
-      
+    
+    
   )
   
   output$categoryBarPlot <- renderPlotly(
@@ -190,26 +163,46 @@ server <- function(input, output) {
       )
   )
   
+  concatenateStringVector <- function(stringVector) {
+    return(
+      unlist(stringVector) %>%
+        unique() %>%
+        na.omit() %>%
+        paste(collapse = ', ')
+      )
+  }
+  
+  output$tableDataInfo <- renderText({
+    paste(
+      'Wartości występujące w poszczególnych kolumnach:<br>',
+      '<b>Category:</b> ', concatenateStringVector(species['Category']),
+      '<br><b>Occurrence:</b> ', concatenateStringVector(species['Occurrence']),
+      '<br><b>Nativenes:</b> ', concatenateStringVector(species['Nativeness']),
+      '<br><b>Abundance: </b> ', concatenateStringVector(species['Abundance']),
+      '<br><b>Status:</b> ', concatenateStringVector(species['Status'])
+      )
+  })
+  
   output$spieciesTable <- DT::renderDataTable({
     speciesInTable <- species
-    if (input$category != 'All') {
-      speciesInTable <- filter(speciesInTable, Category == input$category)
-    }
-    if (input$occurrence != 'All') {
-      speciesInTable <- filter(speciesInTable, Occurrence == input$occurrence)
-    }
-    if (input$nativeness != 'All') {
-      speciesInTable <- filter(speciesInTable, Nativeness == input$nativeness)
-    }
-    if (input$abundance != 'All') {
-      speciesInTable <- filter(speciesInTable, Abundance == input$abundance)
-    }
-    if (input$seasonality != 'All') {
-      speciesInTable <- filter(speciesInTable, Seasonality == input$seasonality)
-    }
-    if (input$safeStatus != 'All') {
-      speciesInTable <- filter(speciesInTable, Status == input$safeStatus)
-    }
+    # if (input$category != 'All') {
+    #   speciesInTable <- filter(speciesInTable, Category == input$category)
+    # }
+    # if (input$occurrence != 'All') {
+    #   speciesInTable <- filter(speciesInTable, Occurrence == input$occurrence)
+    # }
+    # if (input$nativeness != 'All') {
+    #   speciesInTable <- filter(speciesInTable, Nativeness == input$nativeness)
+    # }
+    # if (input$abundance != 'All') {
+    #   speciesInTable <- filter(speciesInTable, Abundance == input$abundance)
+    # }
+    # if (input$seasonality != 'All') {
+    #   speciesInTable <- filter(speciesInTable, Seasonality == input$seasonality)
+    # }
+    # if (input$safeStatus != 'All') {
+    #   speciesInTable <- filter(speciesInTable, Status == input$safeStatus)
+    # }
     speciesInTable %>%
       select(Category, Order, Family, `Scientific Name`, `Common Names`,
              Occurrence, Nativeness, Abundance, Seasonality, Status) %>%
@@ -233,8 +226,8 @@ server <- function(input, output) {
             axis.title.x = element_text(size = 12, face = "bold", color = "black"),
             axis.title.y = element_text(size = 12, face = "bold", color = "black"))
     
-      
-      
+    
+    
   )
   
   output$parksSpecies <- renderPlotly({
@@ -262,20 +255,20 @@ server <- function(input, output) {
     paste('Kod Parku: ', currentPark$`Park Name`, 
           ', Stany: ', currentPark$statesNames, 
           ', powierzchnia[km2]: ', round(currentPark$km2, digits = 2)
-          )
+    )
   })
   
   output$featureBarPlot <- renderPlotly({
     currentParkData <- filter(myData, `Park Name` == input$park)
     currentFeature <- input$feature
-
+    
     p <- currentParkData %>%
       group_by_at(input$feature) %>%
       summarise(count = n()) %>%
       filter(count > input$cut & !is.na(eval(as.name(input$feature)))) %>%
       ggplot(aes(x = eval(as.name(input$feature)), y = count, fill = eval(as.name(currentFeature)))) +
       geom_bar(stat = 'identity', width = 0.6, position = position_dodge(width = 0.6)) +
-      scale_fill_brewer(palette = "Set3") +
+      scale_fill_viridis_d(option = "magma") +
       theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust = 1),
             axis.title = element_text(size = 11, color = "black", face = "bold"),
             axis.text = element_text(size = 10, color = "black", face = "bold"),
@@ -363,5 +356,3 @@ server <- function(input, output) {
 
 # Uruchomienie apki ####
 shinyApp(ui = ui, server = server)
-
-
