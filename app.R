@@ -47,12 +47,12 @@ ui <- fluidPage(
   tags$head(
     tags$style(
       HTML('
-           body { background-color: #F0FFFF; width: 100% }
-           .container { background-color: #E0EEEE; padding: 60px; }
-           .infodiv { background-color: #E0EEEE; }
-           .afterplot { margin-top: 20px; }
-           #parkInfo { margin-bottom: 20px; font-weight: 700; }
-           ')
+         body { background-color: #F0FFFF; width: 100% }
+         .container { background-color: #E0EEEE; padding: 60px; width: 100%; }
+         .infodiv { background-color: #E0EEEE; }
+         .afterplot { margin-top: 20px; }
+         #parkInfo { margin-bottom: 20px; font-weight: 700; }
+         ')
     )
   ),
   #Panele
@@ -92,18 +92,18 @@ ui <- fluidPage(
           selectInput('occurrence',
                       'Występowanie',
                       choices = drop_na(add_row(unique(species['Occurrence']),
-                                        Occurrence = 'All',
-                                        .before = 1))),
+                                                Occurrence = 'All',
+                                                .before = 1))),
           selectInput('nativeness',
                       'Rodzimość',
                       choices = drop_na(add_row(unique(species['Nativeness']),
-                                        Nativeness = 'All',
-                                        .before = 1))),
+                                                Nativeness = 'All',
+                                                .before = 1))),
           selectInput('abundance',
                       'Rzadkość',
                       choices = drop_na(add_row(unique(species['Abundance']),
-                                        Abundance = 'All',
-                                        .before = 1))),
+                                                Abundance = 'All',
+                                                .before = 1))),
           selectInput('seasonality',
                       'Sezonowość',
                       choices = drop_na(add_row(unique(species['Seasonality']),
@@ -121,26 +121,26 @@ ui <- fluidPage(
       ),
       tabPanel(
         'Wizualizacja danych', 
-         plotOutput(outputId = 'statesSpecies'),
-         plotlyOutput(outputId = 'parksSpecies'),
-         selectInput('park',
-                     'Wybierz Park Narodowy',
-                     choices = parks['Park Name']),
-         selectInput('feature',
-                     'Wybierz cechę',
-                     choices = c('Category', 'Occurrence', 'Nativeness', 'Abundance', 'Seasonality', 'Status')),
-         sliderInput('cut',
-                     'Wybierz obcięcie',
-                     min = 0,
-                     max = 500,
-                     value = 0
-         ),
-         textOutput(outputId = 'parkInfo'),
-         plotlyOutput(outputId = 'featureBarPlot'),
-         selectInput('categorySpeciesCount',
-                     'Wybierz kategorię',
-                     choices = unique(species['Category'])),
-         DT::dataTableOutput('speciesTableCount')
+        plotOutput(outputId = 'statesSpecies'),
+        plotlyOutput(outputId = 'parksSpecies'),
+        selectInput('park',
+                    'Wybierz Park Narodowy',
+                    choices = parks['Park Name']),
+        selectInput('feature',
+                    'Wybierz cechę',
+                    choices = c('Category', 'Occurrence', 'Nativeness', 'Abundance', 'Seasonality', 'Status')),
+        sliderInput('cut',
+                    'Wybierz obcięcie',
+                    min = 0,
+                    max = 500,
+                    value = 0
+        ),
+        textOutput(outputId = 'parkInfo'),
+        plotlyOutput(outputId = 'featureBarPlot'),
+        selectInput('categorySpeciesCount',
+                    'Wybierz kategorię',
+                    choices = unique(species['Category'])),
+        DT::dataTableOutput('speciesTableCount')
         
       ),
       tabPanel(
@@ -170,8 +170,8 @@ server <- function(input, output) {
             plot.title = element_text(size = 14, face = "bold", color = "black"),
             axis.title.x = element_text(size = 12, face = "bold", color = "black"),
             axis.title.y = element_text(size = 12, face = "bold", color = "black"))
-
-      
+    
+    
   )
   
   output$categoryBarPlot <- renderPlotly(
@@ -233,8 +233,8 @@ server <- function(input, output) {
             axis.title.x = element_text(size = 12, face = "bold", color = "black"),
             axis.title.y = element_text(size = 12, face = "bold", color = "black"))
     
-      
-      
+    
+    
   )
   
   output$parksSpecies <- renderPlotly({
@@ -262,20 +262,20 @@ server <- function(input, output) {
     paste('Kod Parku: ', currentPark$`Park Name`, 
           ', Stany: ', currentPark$statesNames, 
           ', powierzchnia[km2]: ', round(currentPark$km2, digits = 2)
-          )
+    )
   })
   
   output$featureBarPlot <- renderPlotly({
     currentParkData <- filter(myData, `Park Name` == input$park)
     currentFeature <- input$feature
-
+    
     p <- currentParkData %>%
       group_by_at(input$feature) %>%
       summarise(count = n()) %>%
       filter(count > input$cut & !is.na(eval(as.name(input$feature)))) %>%
       ggplot(aes(x = eval(as.name(input$feature)), y = count, fill = eval(as.name(currentFeature)))) +
       geom_bar(stat = 'identity', width = 0.6, position = position_dodge(width = 0.6)) +
-      scale_fill_brewer(palette = "Set3") +
+      scale_fill_viridis_d(option = "magma") +
       theme(axis.text.x = element_text(angle = 45, vjust = 0.6, hjust = 1),
             axis.title = element_text(size = 11, color = "black", face = "bold"),
             axis.text = element_text(size = 10, color = "black", face = "bold"),
